@@ -25,7 +25,7 @@ public class Coordinator {
 		int numberOfCores = 2;
 		int numberOfNodes = 1;
 
-		// Number of worker nodes to spawn
+		// Number of worker nodes to spawn (parallel queries)
 		int N = numberOfCores * numberOfNodes * 3;
 
 		// max token range in ScyllaDB
@@ -39,16 +39,29 @@ public class Coordinator {
 		String[] contactPoints = { "172.17.0.2", "172.17.0.3", "172.17.0.4" };
 		String keyspace = "catalog";
 		String tableName = "superheroes";
-		String partitionKeys="first_name,last_name";
+		String partitionKeys="first_name";
 
 		// Beginning execution
 		ExecutorService executorService = Executors.newFixedThreadPool(N);
-
-		while (min.compareTo(max) != 0 || min.compareTo(max) < 1) {
+		
+		// Checker variable
+		// if unequal distribution happens then check notifies for that.
+		// and the values are adjusted.
+		BigInteger check=min;
+        
+		while (min.compareTo(max) < 1) {
 
 			// Creating connection
 			DataSource datasource = new DataSource(contactPoints, keyspace);
 			Session session = datasource.getSession();
+			
+			check=min;
+			check=check.add(sizeOfEachQueryRange);
+			
+			if(check.compareTo(max)>1) {
+				sizeOfEachQueryRange=max.subtract(min);
+			}
+			
 			Callable<Long> callable = new WorkerService(session,partitionKeys,min,sizeOfEachQueryRange,tableName);
 			
 			Future<Long> future=executorService.submit(callable);

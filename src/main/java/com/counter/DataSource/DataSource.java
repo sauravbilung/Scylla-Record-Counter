@@ -1,6 +1,7 @@
 package com.counter.DataSource;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.Session;
 
 public class DataSource {
@@ -9,6 +10,7 @@ public class DataSource {
 	String keyspace;
 	Cluster cluster;
 	Session session;
+	PoolingOptions poolingOptions=new PoolingOptions();
 
 	public DataSource(String[] contactPoints, String keyspace) {
 		super();
@@ -18,7 +20,7 @@ public class DataSource {
 	}
 
 	public void createConnection() {
-		cluster = Cluster.builder().addContactPoints(contactPoints).build();
+		cluster = Cluster.builder().addContactPoints(contactPoints).withPoolingOptions(poolingOptions).build();
 		session = cluster.connect(keyspace);
 	}
 

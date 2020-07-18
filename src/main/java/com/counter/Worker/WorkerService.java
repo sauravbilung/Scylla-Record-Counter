@@ -3,12 +3,9 @@ package com.counter.Worker;
 import java.math.BigInteger;
 import java.util.concurrent.Callable;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Token;
 
 public class WorkerService implements Callable<Long> {
 
@@ -35,6 +32,10 @@ public class WorkerService implements Callable<Long> {
 				+ ") >= token(?) AND token(" + partitionKeys + ") <= token(?)");
 		String lowerLimitOfQuery = token.toString();
 		String upperLimitOfQuery = token.add(sizeOfEachQueryRange).subtract(BigInteger.valueOf(1)).toString();
+
+		// # Thread and task information
+		System.out.println("Thread " + Thread.currentThread().getId() + " is executing for token ranges from "
+				+ lowerLimitOfQuery + " to " + upperLimitOfQuery);
 
 		Row row = session.execute(get.bind(lowerLimitOfQuery, upperLimitOfQuery)).one();
 		return row.getLong(0);

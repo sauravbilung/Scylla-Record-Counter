@@ -28,19 +28,39 @@ public class WorkerService implements Callable<Long> {
 	@Override
 	public Long call() throws Exception {
 
-		PreparedStatement get = session.prepare("SELECT count(1) as totalRecords FROM " + table + " WHERE token(" + partitionKeys
-				+ ") >= token(?) AND token(" + partitionKeys + ") <= token(?)");
+		// ### Prepared statement is throwing errors hence Simple Statement is used.
+		// ### Prepared statement is commented out.
+		
+		/*
+		 * PreparedStatement get =
+		 * session.prepare("SELECT count(1) as totalRecords FROM " + table +
+		 * " WHERE token(" + partitionKeys + ") >= token(?) AND token(" + partitionKeys
+		 * + ") <= token(?)");
+		 * 
+		 * String lowerLimitOfQuery = token.toString(); String upperLimitOfQuery =
+		 * token.add(sizeOfEachQueryRange).subtract(BigInteger.valueOf(1)).toString();
+		 * 
+		 * // # Thread and task information System.out.println("Thread " +
+		 * Thread.currentThread().getId() + " is executing for token ranges from " +
+		 * lowerLimitOfQuery + " to " + upperLimitOfQuery);
+		 * 
+		 * Row row = session.execute(get.bind(lowerLimitOfQuery,
+		 * upperLimitOfQuery)).one();
+		 * System.out.println("Total Records in this range : "+row.getLong(0)); return
+		 * row.getLong(0);
+		 */
+
+		// Using simple statements
 		
 		String lowerLimitOfQuery = token.toString();
 		String upperLimitOfQuery = token.add(sizeOfEachQueryRange).subtract(BigInteger.valueOf(1)).toString();
 
-		// # Thread and task information
+		Row row = session.execute("SELECT count(1) FROM " + table + " WHERE token(" + partitionKeys + ") >= "
+				+ lowerLimitOfQuery + " AND token(" + partitionKeys + ") <= " + upperLimitOfQuery).one();
+
 		System.out.println("Thread " + Thread.currentThread().getId() + " is executing for token ranges from "
 				+ lowerLimitOfQuery + " to " + upperLimitOfQuery);
-
-		Row row = session.execute(get.bind(lowerLimitOfQuery, upperLimitOfQuery)).one();
 		
-		System.out.println("Total Records in this range : "+row.getLong(0));
 		return row.getLong(0);
 	}
 

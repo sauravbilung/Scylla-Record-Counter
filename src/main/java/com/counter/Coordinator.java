@@ -72,6 +72,7 @@ public class Coordinator {
 				min = min.add(sizeOfEachQueryRange);
 
 			}
+			
 		} catch (InterruptedException | ExecutionException e) {
 			e.printStackTrace();
 		} finally {

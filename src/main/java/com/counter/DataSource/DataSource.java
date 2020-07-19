@@ -6,16 +6,16 @@ import com.datastax.driver.core.Session;
 
 public class DataSource {
 
-	String[] contactPoints;
-	String keyspace;
-	Cluster cluster;
-	Session session;
-	PoolingOptions poolingOptions=new PoolingOptions();
+	static String[] contactPoints;
+	static String keyspace;
+	static Cluster cluster;
+	static Session session;
+	static PoolingOptions poolingOptions = new PoolingOptions();
 
 	public DataSource(String[] contactPoints, String keyspace) {
 		super();
-		this.contactPoints = contactPoints;
-		this.keyspace = keyspace;
+		DataSource.contactPoints = contactPoints;
+		DataSource.keyspace = keyspace;
 		createConnection();
 	}
 
@@ -24,7 +24,7 @@ public class DataSource {
 		session = cluster.connect(keyspace);
 	}
 
-	public Session getSession() {
+	public static Session getSession() {
 		return session;
 	}
 

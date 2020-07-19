@@ -33,8 +33,8 @@ public class Coordinator {
 		long M = N * 100;
 		BigInteger sizeOfEachQueryRange = new BigInteger("9223372036854775807").divide(BigInteger.valueOf(M));
 
-		// Scylla Connection properties
-		String[] contactPoints = { "172.17.0.2", "172.17.0.3", "172.17.0.4" };
+		// Connection properties
+		String[] contactPoints = { "172.17.0.2","172.17.0.3","172.17.0.4" };
 		String keyspace = "catalog";
 		String tableName = "superheroes";
 		String partitionKeys = "first_name";
@@ -47,33 +47,36 @@ public class Coordinator {
 		// and the values are adjusted.
 		BigInteger check = min;
 
-		while (min.compareTo(max) == -1) {
+		// Creating connection
+		DataSource datasource = new DataSource(contactPoints, keyspace);
+		datasource.createConnection();
+		Session session = DataSource.getSession();
 
-			// Creating connection
-			DataSource datasource = new DataSource(contactPoints, keyspace);
-			Session session = datasource.getSession();
+		try {
+			while (min.compareTo(max) == -1) {
 
-			check = min;
-			check = check.add(sizeOfEachQueryRange);
+				check = min;
+				check = check.add(sizeOfEachQueryRange);
 
-			if (check.compareTo(max) == 1) {
-				sizeOfEachQueryRange = max.subtract(min);
-			}
+				if (check.compareTo(max) == 1) {
+					sizeOfEachQueryRange = max.subtract(min);
+				}
 
-			Callable<Long> callable = new WorkerService(session, partitionKeys, min, sizeOfEachQueryRange, tableName);
+				Callable<Long> callable = new WorkerService(session, partitionKeys, min, sizeOfEachQueryRange,
+						tableName);
 
-			Future<Long> future = executorService.submit(callable);
+				Future<Long> future = executorService.submit(callable);
 
-			try {
 				totalRecords += future.get();
-			} catch (InterruptedException | ExecutionException e) {
-				e.printStackTrace();
-			} finally {
-				datasource.closeConnection();
+
+				min = min.add(sizeOfEachQueryRange);
+
 			}
-
-			min = min.add(sizeOfEachQueryRange);
-
+		} catch (InterruptedException | ExecutionException e) {
+			e.printStackTrace();
+		} finally {
+			// Closing connection 
+			datasource.closeConnection();
 		}
 
 		System.out.println("Total Records : " + totalRecords);

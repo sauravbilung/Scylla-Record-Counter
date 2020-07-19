@@ -28,8 +28,9 @@ public class WorkerService implements Callable<Long> {
 	@Override
 	public Long call() throws Exception {
 
-		PreparedStatement get = session.prepare("SELECT count(1) FROM " + table + " WHERE token(" + partitionKeys
+		PreparedStatement get = session.prepare("SELECT count(1) as totalRecords FROM " + table + " WHERE token(" + partitionKeys
 				+ ") >= token(?) AND token(" + partitionKeys + ") <= token(?)");
+		
 		String lowerLimitOfQuery = token.toString();
 		String upperLimitOfQuery = token.add(sizeOfEachQueryRange).subtract(BigInteger.valueOf(1)).toString();
 
@@ -38,8 +39,9 @@ public class WorkerService implements Callable<Long> {
 				+ lowerLimitOfQuery + " to " + upperLimitOfQuery);
 
 		Row row = session.execute(get.bind(lowerLimitOfQuery, upperLimitOfQuery)).one();
+		
+		System.out.println("Total Records in this range : "+row.getLong(0));
 		return row.getLong(0);
-
 	}
 
 }

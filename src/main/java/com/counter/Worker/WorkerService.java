@@ -30,7 +30,7 @@ public class WorkerService implements Callable<Long> {
 
 		// ### Prepared statement is throwing errors hence Simple Statement is used.
 		// ### Prepared statement is commented out.
-		
+
 		/*
 		 * PreparedStatement get =
 		 * session.prepare("SELECT count(1) as totalRecords FROM " + table +
@@ -51,16 +51,16 @@ public class WorkerService implements Callable<Long> {
 		 */
 
 		// Using simple statements
-		
+
 		String lowerLimitOfQuery = token.toString();
-		String upperLimitOfQuery = token.add(sizeOfEachQueryRange).subtract(BigInteger.valueOf(1)).toString();
+		String upperLimitOfQuery = token.add(sizeOfEachQueryRange).toString();
 
 		Row row = session.execute("SELECT count(1) FROM " + table + " WHERE token(" + partitionKeys + ") >= "
 				+ lowerLimitOfQuery + " AND token(" + partitionKeys + ") <= " + upperLimitOfQuery).one();
 
 		System.out.println("Thread " + Thread.currentThread().getId() + " is executing for token ranges from "
-				+ lowerLimitOfQuery + " to " + upperLimitOfQuery);
-		
+				+ lowerLimitOfQuery + " to " + upperLimitOfQuery+". Total records : "+row.getLong(0));
+
 		return row.getLong(0);
 	}
 

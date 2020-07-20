@@ -1,6 +1,8 @@
 package com.counter;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -21,9 +23,10 @@ public class Coordinator {
 
 		// Number of worker nodes to spawn (parallel queries)
 		int N = numberOfCores * numberOfNodes * 3;
+		// int N=16;
 
 		// record counter
-		long totalRecords = 0;
+		BigInteger totalRecords = new BigInteger("0");
 
 		// token ranges in ScyllaDB
 		BigInteger min = new BigInteger("-9223372036854775807");
@@ -34,12 +37,12 @@ public class Coordinator {
 		BigInteger sizeOfEachQueryRange = new BigInteger("9223372036854775807").divide(BigInteger.valueOf(M));
 
 		// Connection properties
-		String[] contactPoints = { "172.17.0.2","172.17.0.3","172.17.0.4" };
+		String[] contactPoints = { "172.17.0.2", "172.17.0.3", "172.17.0.4" };
 		String keyspace = "catalog";
 		String tableName = "superheroes";
 		String partitionKeys = "first_name";
 
-		// Beginning execution
+		// Creating a thread pool
 		ExecutorService executorService = Executors.newFixedThreadPool(N);
 
 		// Checker variable
@@ -52,34 +55,52 @@ public class Coordinator {
 		datasource.createConnection();
 		Session session = DataSource.getSession();
 
-		try {
-			while (min.compareTo(max) == -1) {
+		// List of Callable Tasks
+		List<Callable<Long>> callableTasks = new ArrayList<Callable<Long>>();
 
-				check = min;
-				check = check.add(sizeOfEachQueryRange);
+		// Creating a list of Callable tasks
+		while (min.compareTo(max) == -1) {
 
-				if (check.compareTo(max) == 1) {
-					sizeOfEachQueryRange = max.subtract(min);
-				}
+			check = min;
+			check = check.add(sizeOfEachQueryRange);
 
-				Callable<Long> callable = new WorkerService(session, partitionKeys, min, sizeOfEachQueryRange,
-						tableName);
-
-				Future<Long> future = executorService.submit(callable);
-
-				totalRecords += future.get();
-
-				min = min.add(sizeOfEachQueryRange);
-
+			if (check.compareTo(max) == 1) {
+				sizeOfEachQueryRange = max.subtract(min);
 			}
-			
+
+			Callable<Long> callable = new WorkerService(session, partitionKeys, min, sizeOfEachQueryRange, tableName);
+			callableTasks.add(callable);
+
+			// System.out.println("Lower Limit of Query : "+min.toString()+" Upper Limit of
+			// Query : "+max.toString());
+
+			// Increased query range by 1 from the expected. Still Results
+			min = min.add(sizeOfEachQueryRange).add(BigInteger.valueOf(1));
+
+		}
+
+		// Executing the tasks
+		List<Future<Long>> futures = null;
+
+		try {
+
+			futures = executorService.invokeAll(callableTasks);
+
+			// Counting the records
+			for (Future<Long> future : futures) {
+				totalRecords = totalRecords.add(BigInteger.valueOf(future.get()));
+				// totalRecords=totalRecords.add(new BigInteger(future.get().toString()));
+			}
+
 		} catch (InterruptedException | ExecutionException e) {
 			e.printStackTrace();
 		} finally {
-			// Closing connection 
+			// Closing connection
 			datasource.closeConnection();
 		}
 
+		// System.out.println("Total Callables : "+callableTasks.size());
 		System.out.println("Total Records : " + totalRecords);
+
 	}
 }

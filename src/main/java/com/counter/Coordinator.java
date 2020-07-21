@@ -8,12 +8,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.counter.DataSource.DataSource;
 import com.counter.Worker.WorkerService;
 import com.datastax.driver.core.Session;
 
 public class Coordinator {
+
+	// For tracking total queries created.
+	public static AtomicLong queryCounter = new AtomicLong();
 
 	public static void main(String[] args) {
 
@@ -23,7 +27,6 @@ public class Coordinator {
 
 		// Number of worker nodes to spawn (parallel queries)
 		int N = numberOfCores * numberOfNodes * 3;
-		// int N=16;
 
 		// record counter
 		BigInteger totalRecords = new BigInteger("0");
@@ -34,7 +37,9 @@ public class Coordinator {
 
 		// Number of query ranges
 		long M = N * 100;
-		BigInteger sizeOfEachQueryRange = new BigInteger("9223372036854775807").divide(BigInteger.valueOf(M));
+		// Size of each query range. The number here is total number tokens in Scylla.
+		BigInteger sizeOfEachQueryRange = new BigInteger("18446744073709551614").divide(BigInteger.valueOf(M))
+				.subtract(BigInteger.valueOf(1));
 
 		// Connection properties
 		String[] contactPoints = { "172.17.0.2", "172.17.0.3", "172.17.0.4" };
@@ -46,7 +51,7 @@ public class Coordinator {
 		ExecutorService executorService = Executors.newFixedThreadPool(N);
 
 		// Checker variable
-		// if unequal distribution happens then check notifies for that.
+		// If unequal distribution happens then check notifies for that
 		// and the values are adjusted.
 		BigInteger check = min;
 
@@ -59,10 +64,11 @@ public class Coordinator {
 		List<Callable<Long>> callableTasks = new ArrayList<Callable<Long>>();
 
 		// Creating a list of Callable tasks
-		while (min.compareTo(max) == -1) {
+		while (min.compareTo(max) != 1) {
 
-			check = min;
-			check = check.add(sizeOfEachQueryRange);
+			// check is to identify the case when (min + sizeOfEachQueryRange)
+			// becomes greater than max. In such case values are adjusted.
+			check = min.add(sizeOfEachQueryRange);
 
 			if (check.compareTo(max) == 1) {
 				sizeOfEachQueryRange = max.subtract(min);
@@ -71,13 +77,12 @@ public class Coordinator {
 			Callable<Long> callable = new WorkerService(session, partitionKeys, min, sizeOfEachQueryRange, tableName);
 			callableTasks.add(callable);
 
-			// System.out.println("Lower Limit of Query : "+min.toString()+" Upper Limit of
-			// Query : "+max.toString());
-
-			// Increased query range by 1 from the expected. Still Results
 			min = min.add(sizeOfEachQueryRange).add(BigInteger.valueOf(1));
 
 		}
+
+		// Initializing atomic long
+		queryCounter.set(callableTasks.size());
 
 		// Executing the tasks
 		List<Future<Long>> futures = null;

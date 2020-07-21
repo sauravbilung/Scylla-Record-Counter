@@ -3,6 +3,7 @@ package com.counter.Worker;
 import java.math.BigInteger;
 import java.util.concurrent.Callable;
 
+import com.counter.Coordinator;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
@@ -28,40 +29,20 @@ public class WorkerService implements Callable<Long> {
 	@Override
 	public Long call() throws Exception {
 
-		// ### Prepared statement is throwing errors hence Simple Statement is used.
-		// ### Prepared statement is commented out.
+		PreparedStatement get = session.prepare("SELECT count(1) as totalRecords FROM " + table + " WHERE token("
+				+ partitionKeys + ") >= ? AND token(" + partitionKeys + ") <= ?");
 
-		/*
-		 * PreparedStatement get =
-		 * session.prepare("SELECT count(1) as totalRecords FROM " + table +
-		 * " WHERE token(" + partitionKeys + ") >= token(?) AND token(" + partitionKeys
-		 * + ") <= token(?)");
-		 * 
-		 * String lowerLimitOfQuery = token.toString(); String upperLimitOfQuery =
-		 * token.add(sizeOfEachQueryRange).subtract(BigInteger.valueOf(1)).toString();
-		 * 
-		 * // # Thread and task information System.out.println("Thread " +
-		 * Thread.currentThread().getId() + " is executing for token ranges from " +
-		 * lowerLimitOfQuery + " to " + upperLimitOfQuery);
-		 * 
-		 * Row row = session.execute(get.bind(lowerLimitOfQuery,
-		 * upperLimitOfQuery)).one();
-		 * System.out.println("Total Records in this range : "+row.getLong(0)); return
-		 * row.getLong(0);
-		 */
+		Long lowerLimitOfQuery = token.longValue();
+		Long upperLimitOfQuery = token.add(sizeOfEachQueryRange).longValue();
 
-		// Using simple statements
+		// # Thread and task information
+		System.out.println("[Thread " + Thread.currentThread().getId() + "] is executing for token ranges from "
+				+ lowerLimitOfQuery + " to " + upperLimitOfQuery + ". Queries Remaining :"
+				+ Coordinator.queryCounter.getAndDecrement());
 
-		String lowerLimitOfQuery = token.toString();
-		String upperLimitOfQuery = token.add(sizeOfEachQueryRange).toString();
-
-		Row row = session.execute("SELECT count(1) FROM " + table + " WHERE token(" + partitionKeys + ") >= "
-				+ lowerLimitOfQuery + " AND token(" + partitionKeys + ") <= " + upperLimitOfQuery).one();
-
-		System.out.println("Thread " + Thread.currentThread().getId() + " is executing for token ranges from "
-				+ lowerLimitOfQuery + " to " + upperLimitOfQuery+". Total records : "+row.getLong(0));
-
+		Row row = session.execute(get.bind(lowerLimitOfQuery, upperLimitOfQuery)).one();
 		return row.getLong(0);
+		
 	}
 
 }

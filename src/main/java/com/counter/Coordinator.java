@@ -23,15 +23,15 @@ public class Coordinator {
 	public static AtomicLong queryCounter = new AtomicLong();
 
 	public static void main(String[] args) {
-		
+
 		DateFormat formatter = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss");
-		Date date=new Date();
-		
+		Date date = new Date();
+
 		// start time
 		long startTime = System.currentTimeMillis();
 
 		// Node information
-		int numberOfCores = 2;
+		int numberOfCores = 4;
 		int numberOfNodes = 1;
 
 		// Number of worker nodes to spawn (parallel queries)
@@ -46,12 +46,13 @@ public class Coordinator {
 
 		// Number of query ranges
 		long M = N * 100;
-		// Size of each query range. The number here is total number tokens in Scylla.
+		// Size of each query range. Total tokens in Scylla: 18446744073709551614
 		BigInteger sizeOfEachQueryRange = new BigInteger("18446744073709551614").divide(BigInteger.valueOf(M))
 				.subtract(BigInteger.valueOf(1));
 
 		// Connection properties
-		String[] contactPoints = { "172.17.0.2", "172.17.0.3", "172.17.0.3" };
+		// Connection properties
+		String[] contactPoints = { "172.17.0.2", "172.17.0.3", "172.17.0.4" };
 		String keyspace = "catalog";
 		String tableName = "Superheroes";
 		String partitionKeys = "first_name";
@@ -59,9 +60,7 @@ public class Coordinator {
 		// Creating a thread pool
 		ExecutorService executorService = Executors.newFixedThreadPool(N);
 
-		// Checker variable
-		// If unequal distribution happens then check notifies for that
-		// and the values are adjusted.
+		// Checker variable. Explained below
 		BigInteger check = min;
 
 		// Creating connection
@@ -121,9 +120,9 @@ public class Coordinator {
 		System.out.println("Execution start time : " + formatter.format(date));
 		long endTime = System.currentTimeMillis();
 		date.setTime(endTime);
-		System.out.println("Execution end time : "+formatter.format(date));
-		long totalExecutionTime=endTime-startTime;
-		System.out.println("Total execution time :"+ totalExecutionTime/1000+" seconds");
+		System.out.println("Execution end time : " + formatter.format(date));
+		long totalExecutionTime = endTime - startTime;
+		System.out.println("Total execution time :" + totalExecutionTime / 1000 + " seconds");
 
 	}
 }

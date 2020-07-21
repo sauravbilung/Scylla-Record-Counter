@@ -1,7 +1,10 @@
 package com.counter;
 
 import java.math.BigInteger;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -20,6 +23,12 @@ public class Coordinator {
 	public static AtomicLong queryCounter = new AtomicLong();
 
 	public static void main(String[] args) {
+		
+		DateFormat formatter = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss");
+		Date date=new Date();
+		
+		// start time
+		long startTime = System.currentTimeMillis();
 
 		// Node information
 		int numberOfCores = 2;
@@ -42,9 +51,9 @@ public class Coordinator {
 				.subtract(BigInteger.valueOf(1));
 
 		// Connection properties
-		String[] contactPoints = { "172.17.0.2", "172.17.0.3", "172.17.0.4" };
+		String[] contactPoints = { "172.17.0.2", "172.17.0.3", "172.17.0.3" };
 		String keyspace = "catalog";
-		String tableName = "superheroes";
+		String tableName = "Superheroes";
 		String partitionKeys = "first_name";
 
 		// Creating a thread pool
@@ -106,6 +115,15 @@ public class Coordinator {
 
 		// System.out.println("Total Callables : "+callableTasks.size());
 		System.out.println("Total Records : " + totalRecords);
+
+		// Time calculation
+		date.setTime(startTime);
+		System.out.println("Execution start time : " + formatter.format(date));
+		long endTime = System.currentTimeMillis();
+		date.setTime(endTime);
+		System.out.println("Execution end time : "+formatter.format(date));
+		long totalExecutionTime=endTime-startTime;
+		System.out.println("Total execution time :"+ totalExecutionTime/1000+" seconds");
 
 	}
 }
